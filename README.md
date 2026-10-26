@@ -13,6 +13,11 @@ Changes from upstream, and nothing else:
   as members without an invite, and new ones get no personal organisation.
 - `patches/0003-ergeon-land-in-organisation-team.patch`: `/` opens that organisation's team even
   when the remembered team is elsewhere.
+- `patches/0004-ergeon-admin-only-create-organisation-team.patch`: only instance admins (`ADMIN`
+  role) can create organisations and teams; the create links and dialogs are hidden for others.
+- `patches/0005-ergeon-private-documents-by-default.patch`: new documents start with admin-only
+  visibility, so only the owner, recipients and team admins see them until the owner widens it.
+  Templates keep the team default.
 - `public/`: Ergeon favicons, web manifest and link-preview image, copied over `apps/remix/public/`.
 
 Build: `make docker-build` clones upstream at the pinned tag, applies the patches, copies `public/`

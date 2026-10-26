@@ -1,0 +1,40 @@
+diff --git a/apps/remix/app/routes/_index.tsx b/apps/remix/app/routes/_index.tsx
+index 65424ce..21a5997 100644
+--- a/apps/remix/app/routes/_index.tsx
++++ b/apps/remix/app/routes/_index.tsx
+@@ -1,6 +1,7 @@
+ import { extractCookieFromHeaders } from '@documenso/auth/server/lib/utils/cookies';
+ import { getOptionalSession } from '@documenso/auth/server/lib/utils/get-session';
+ import { PREFERRED_TEAM_URL_COOKIE } from '@documenso/lib/constants/cookies';
++import { isAutoJoinOrganisation } from '@documenso/lib/server-only/organisation/auto-join-organisation';
+ import { getTeams } from '@documenso/lib/server-only/team/get-teams';
+ import { formatDocumentsPath } from '@documenso/lib/utils/teams';
+ import { ZTeamUrlSchema } from '@documenso/trpc/server/team-router/schema';
+@@ -38,6 +39,13 @@ export async function loader({ request }: Route.LoaderArgs) {
+ 
+     let currentTeam = teams.find((team) => team.url === preferredTeamUrl);
+ 
++    // Staff work in the auto-join organisation; a remembered team outside it doesn't win.
++    const autoJoinTeam = teams.find((team) => isAutoJoinOrganisation(team.organisationId));
++
++    if (autoJoinTeam && !(currentTeam && isAutoJoinOrganisation(currentTeam.organisationId))) {
++      currentTeam = autoJoinTeam;
++    }
++
+     if (!currentTeam && teams.length === 1) {
+       currentTeam = teams[0];
+     }
+diff --git a/packages/lib/server-only/organisation/auto-join-organisation.ts b/packages/lib/server-only/organisation/auto-join-organisation.ts
+index 136eedc..91c30f1 100644
+--- a/packages/lib/server-only/organisation/auto-join-organisation.ts
++++ b/packages/lib/server-only/organisation/auto-join-organisation.ts
+@@ -27,6 +27,9 @@ export const isAutoJoinEmail = (email: string) => {
+   return settings !== null && email.toLowerCase().endsWith(`@${settings.emailDomain}`);
+ };
+ 
++export const isAutoJoinOrganisation = (organisationId: string) =>
++  getAutoJoinSettings()?.organisationId === organisationId;
++
+ export type AutoJoinOrganisationOptions = {
+   userId: number;
+   email: string;

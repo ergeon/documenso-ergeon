@@ -11,6 +11,8 @@ Changes from upstream, and nothing else:
 - `patches/0002-ergeon-auto-join-organisation.patch`: users whose email is on
   `NEXT_PRIVATE_AUTO_JOIN_EMAIL_DOMAIN` join the organisation `NEXT_PRIVATE_AUTO_JOIN_ORGANISATION_ID`
   as members without an invite, and new ones get no personal organisation.
+- `patches/0003-ergeon-land-in-organisation-team.patch`: `/` opens that organisation's team even
+  when the remembered team is elsewhere.
 - `public/`: Ergeon favicons, web manifest and link-preview image, copied over `apps/remix/public/`.
 
 Build: `make docker-build` clones upstream at the pinned tag, applies the patches, copies `public/`

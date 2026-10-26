@@ -1,0 +1,295 @@
+diff --git a/apps/remix/app/components/dialogs/organisation-create-dialog.tsx b/apps/remix/app/components/dialogs/organisation-create-dialog.tsx
+index 9bbec26..a617d75 100644
+--- a/apps/remix/app/components/dialogs/organisation-create-dialog.tsx
++++ b/apps/remix/app/components/dialogs/organisation-create-dialog.tsx
+@@ -5,6 +5,7 @@ import { DOCUMENSO_CLOUD_ENTERPRISE_CTA_URL, IS_BILLING_ENABLED } from '@documen
+ import { AppError } from '@documenso/lib/errors/app-error';
+ import { INTERNAL_CLAIM_ID } from '@documenso/lib/types/subscription';
+ import { parseMessageDescriptorMacro } from '@documenso/lib/utils/i18n';
++import { isAdmin } from '@documenso/lib/utils/is-admin';
+ import { isPersonalLayout } from '@documenso/lib/utils/organisations';
+ import { trpc } from '@documenso/trpc/react';
+ import { ZCreateOrganisationRequestSchema } from '@documenso/trpc/server/organisation-router/create-organisation.types';
+@@ -52,7 +53,7 @@ export type TCreateOrganisationFormSchema = z.infer<typeof ZCreateOrganisationFo
+ export const OrganisationCreateDialog = ({ trigger, ...props }: OrganisationCreateDialogProps) => {
+   const { t } = useLingui();
+   const { toast } = useToast();
+-  const { refreshSession, organisations } = useSession();
++  const { user, refreshSession, organisations } = useSession();
+ 
+   const [searchParams] = useSearchParams();
+   const updateSearchParams = useUpdateSearchParams();
+@@ -132,6 +133,10 @@ export const OrganisationCreateDialog = ({ trigger, ...props }: OrganisationCrea
+     );
+   };
+ 
++  if (!isAdmin(user)) {
++    return null;
++  }
++
+   return (
+     <Dialog {...props} open={open} onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}>
+       <DialogTrigger onClick={(e) => e.stopPropagation()} asChild={true}>
+diff --git a/apps/remix/app/components/dialogs/team-create-dialog.tsx b/apps/remix/app/components/dialogs/team-create-dialog.tsx
+index 4b0ba8e..45ed17f 100644
+--- a/apps/remix/app/components/dialogs/team-create-dialog.tsx
++++ b/apps/remix/app/components/dialogs/team-create-dialog.tsx
+@@ -3,6 +3,7 @@ import { useCurrentOrganisation } from '@documenso/lib/client-only/providers/org
+ import { useSession } from '@documenso/lib/client-only/providers/session';
+ import { IS_BILLING_ENABLED, NEXT_PUBLIC_WEBAPP_URL, SUPPORT_EMAIL } from '@documenso/lib/constants/app';
+ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
++import { isAdmin } from '@documenso/lib/utils/is-admin';
+ import { trpc } from '@documenso/trpc/react';
+ import { ZCreateTeamRequestSchema } from '@documenso/trpc/server/team-router/create-team.types';
+ import { Alert, AlertDescription } from '@documenso/ui/primitives/alert';
+@@ -47,7 +48,7 @@ type TCreateTeamFormSchema = z.infer<typeof ZCreateTeamFormSchema>;
+ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDialogProps) => {
+   const { _ } = useLingui();
+   const { toast } = useToast();
+-  const { refreshSession } = useSession();
++  const { user, refreshSession } = useSession();
+ 
+   const [searchParams] = useSearchParams();
+   const updateSearchParams = useUpdateSearchParams();
+@@ -150,6 +151,10 @@ export const TeamCreateDialog = ({ trigger, onCreated, ...props }: TeamCreateDia
+     form.reset();
+   }, [open, form]);
+ 
++  if (!isAdmin(user)) {
++    return null;
++  }
++
+   return (
+     <Dialog {...props} open={open} onOpenChange={(value) => !form.formState.isSubmitting && setOpen(value)}>
+       <DialogTrigger onClick={(e) => e.stopPropagation()} asChild={true}>
+diff --git a/apps/remix/app/components/general/org-menu-switcher.tsx b/apps/remix/app/components/general/org-menu-switcher.tsx
+index 842a801..dc2d7bb 100644
+--- a/apps/remix/app/components/general/org-menu-switcher.tsx
++++ b/apps/remix/app/components/general/org-menu-switcher.tsx
+@@ -189,12 +189,14 @@ export const OrgMenuSwitcher = () => {
+                 </div>
+               ))}
+ 
+-              <Button variant="ghost" className="w-full justify-start" asChild>
+-                <Link to="/settings/organisations?action=add-organisation">
+-                  <Plus className="mr-2 h-4 w-4" />
+-                  <Trans>Create Organisation</Trans>
+-                </Link>
+-              </Button>
++              {isUserAdmin && (
++                <Button variant="ghost" className="w-full justify-start" asChild>
++                  <Link to="/settings/organisations?action=add-organisation">
++                    <Plus className="mr-2 h-4 w-4" />
++                    <Trans>Create Organisation</Trans>
++                  </Link>
++                </Button>
++              )}
+             </div>
+           </div>
+ 
+@@ -247,7 +249,7 @@ export const OrgMenuSwitcher = () => {
+                   </div>
+                 )}
+ 
+-                {displayedOrg && (
++                {displayedOrg && isUserAdmin && (
+                   <Button variant="ghost" className="w-full justify-start" asChild>
+                     <Link to={`/o/${displayedOrg.url}/settings/teams?action=add-team`}>
+                       <Plus className="mr-2 h-4 w-4" />
+diff --git a/apps/remix/app/components/general/settings-org-switcher.tsx b/apps/remix/app/components/general/settings-org-switcher.tsx
+index 3d7046a..95bce4d 100644
+--- a/apps/remix/app/components/general/settings-org-switcher.tsx
++++ b/apps/remix/app/components/general/settings-org-switcher.tsx
+@@ -2,6 +2,7 @@ import { useSession } from '@documenso/lib/client-only/providers/session';
+ import { IS_BILLING_ENABLED } from '@documenso/lib/constants/app';
+ import { type INTERNAL_CLAIM_ID, internalClaims } from '@documenso/lib/types/subscription';
+ import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
++import { isAdmin } from '@documenso/lib/utils/is-admin';
+ import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
+ import { getSettingsNavGroups } from '@documenso/lib/utils/settings-nav';
+ import { computeSwitcherContinuityPath } from '@documenso/lib/utils/settings-switcher';
+@@ -24,7 +25,7 @@ export type SettingsOrgSwitcherProps = {
+ 
+ export const SettingsOrgSwitcher = ({ currentOrgUrl }: SettingsOrgSwitcherProps) => {
+   const { t } = useLingui();
+-  const { organisations } = useSession();
++  const { user, organisations } = useSession();
+   const { pathname } = useLocation();
+   const navigate = useNavigate();
+ 
+@@ -186,14 +187,16 @@ export const SettingsOrgSwitcher = ({ currentOrgUrl }: SettingsOrgSwitcherProps)
+           })}
+         </ul>
+ 
+-        <div className="border-t p-1">
+-          <Button variant="ghost" asChild className="w-full justify-start" data-testid="settings-org-switcher-create">
+-            <a href="/settings/organisations?action=add-organisation">
+-              <PlusIcon className="mr-2 h-4 w-4" />
+-              <Trans>Create organisation</Trans>
+-            </a>
+-          </Button>
+-        </div>
++        {isAdmin(user) && (
++          <div className="border-t p-1">
++            <Button variant="ghost" asChild className="w-full justify-start" data-testid="settings-org-switcher-create">
++              <a href="/settings/organisations?action=add-organisation">
++                <PlusIcon className="mr-2 h-4 w-4" />
++                <Trans>Create organisation</Trans>
++              </a>
++            </Button>
++          </div>
++        )}
+       </PopoverContent>
+     </Popover>
+   );
+diff --git a/apps/remix/app/components/general/settings-team-switcher.tsx b/apps/remix/app/components/general/settings-team-switcher.tsx
+index 313e34b..ecff7fd 100644
+--- a/apps/remix/app/components/general/settings-team-switcher.tsx
++++ b/apps/remix/app/components/general/settings-team-switcher.tsx
+@@ -1,6 +1,7 @@
+ import { useSession } from '@documenso/lib/client-only/providers/session';
+ import { EXTENDED_TEAM_MEMBER_ROLE_MAP } from '@documenso/lib/constants/teams-translations';
+ import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
++import { isAdmin } from '@documenso/lib/utils/is-admin';
+ import { getSettingsNavGroups } from '@documenso/lib/utils/settings-nav';
+ import { computeSwitcherContinuityPath } from '@documenso/lib/utils/settings-switcher';
+ import { canExecuteTeamAction } from '@documenso/lib/utils/teams';
+@@ -23,7 +24,7 @@ export type SettingsTeamSwitcherProps = {
+ 
+ export const SettingsTeamSwitcher = ({ currentOrgUrl, currentTeamUrl }: SettingsTeamSwitcherProps) => {
+   const { t } = useLingui();
+-  const { organisations } = useSession();
++  const { user, organisations } = useSession();
+   const { pathname } = useLocation();
+ 
+   const navigate = useNavigate();
+@@ -152,14 +153,21 @@ export const SettingsTeamSwitcher = ({ currentOrgUrl, currentTeamUrl }: Settings
+           })}
+         </ul>
+ 
+-        <div className="border-t p-1">
+-          <Button variant="ghost" asChild className="w-full justify-start" data-testid="settings-team-switcher-create">
+-            <a href={`/o/${currentOrg.url}/settings/teams?action=add-team`}>
+-              <PlusIcon className="mr-2 h-4 w-4" />
+-              <Trans>Create team</Trans>
+-            </a>
+-          </Button>
+-        </div>
++        {isAdmin(user) && (
++          <div className="border-t p-1">
++            <Button
++              variant="ghost"
++              asChild
++              className="w-full justify-start"
++              data-testid="settings-team-switcher-create"
++            >
++              <a href={`/o/${currentOrg.url}/settings/teams?action=add-team`}>
++                <PlusIcon className="mr-2 h-4 w-4" />
++                <Trans>Create team</Trans>
++              </a>
++            </Button>
++          </div>
++        )}
+       </PopoverContent>
+     </Popover>
+   );
+diff --git a/apps/remix/app/routes/_authenticated+/dashboard.tsx b/apps/remix/app/routes/_authenticated+/dashboard.tsx
+index f53dfa4..2724a2a 100644
+--- a/apps/remix/app/routes/_authenticated+/dashboard.tsx
++++ b/apps/remix/app/routes/_authenticated+/dashboard.tsx
+@@ -2,6 +2,7 @@ import { useSession } from '@documenso/lib/client-only/providers/session';
+ import { ORGANISATION_MEMBER_ROLE_MAP } from '@documenso/lib/constants/organisations-translations';
+ import { TEAM_MEMBER_ROLE_MAP } from '@documenso/lib/constants/teams-translations';
+ import { formatAvatarUrl } from '@documenso/lib/utils/avatars';
++import { isAdmin } from '@documenso/lib/utils/is-admin';
+ import { canExecuteOrganisationAction } from '@documenso/lib/utils/organisations';
+ import { canExecuteTeamAction } from '@documenso/lib/utils/teams';
+ import { Avatar, AvatarFallback, AvatarImage } from '@documenso/ui/primitives/avatar';
+@@ -73,11 +74,13 @@ export default function DashboardPage() {
+               </p>
+             </div>
+ 
+-            <Button asChild className="mt-4" variant="outline">
+-              <Link to="/settings/organisations?action=add-organisation">
+-                <Trans>Create organisation</Trans>
+-              </Link>
+-            </Button>
++            {isAdmin(user) && (
++              <Button asChild className="mt-4" variant="outline">
++                <Link to="/settings/organisations?action=add-organisation">
++                  <Trans>Create organisation</Trans>
++                </Link>
++              </Button>
++            )}
+           </div>
+         )}
+ 
+diff --git a/packages/lib/server-only/public-api/get-api-token-by-token.ts b/packages/lib/server-only/public-api/get-api-token-by-token.ts
+index abfab5e..0d343e0 100644
+--- a/packages/lib/server-only/public-api/get-api-token-by-token.ts
++++ b/packages/lib/server-only/public-api/get-api-token-by-token.ts
+@@ -37,6 +37,7 @@ export const getApiTokenByToken = async ({ token, bypassRateLimit = false }: Get
+                   name: true,
+                   email: true,
+                   disabled: true,
++                  roles: true,
+                 },
+               },
+             },
+@@ -49,6 +50,7 @@ export const getApiTokenByToken = async ({ token, bypassRateLimit = false }: Get
+           name: true,
+           email: true,
+           disabled: true,
++          roles: true,
+         },
+       },
+     },
+diff --git a/packages/trpc/server/organisation-router/create-organisation.ts b/packages/trpc/server/organisation-router/create-organisation.ts
+index 6aa8331..f07877b 100644
+--- a/packages/trpc/server/organisation-router/create-organisation.ts
++++ b/packages/trpc/server/organisation-router/create-organisation.ts
+@@ -5,6 +5,7 @@ import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+ import { createOrganisation } from '@documenso/lib/server-only/organisation/create-organisation';
+ import { getSubscriptionClaim } from '@documenso/lib/server-only/subscription/get-subscription-claim';
+ import { INTERNAL_CLAIM_ID } from '@documenso/lib/types/subscription';
++import { isAdmin } from '@documenso/lib/utils/is-admin';
+ import { prisma } from '@documenso/prisma';
+ import { OrganisationType, SubscriptionStatus } from '@prisma/client';
+ import { authenticatedProcedure } from '../trpc';
+@@ -18,6 +19,12 @@ export const createOrganisationRoute = authenticatedProcedure
+     const { name, priceId } = input;
+     const { user } = ctx;
+ 
++    if (!isAdmin(user)) {
++      throw new AppError(AppErrorCode.UNAUTHORIZED, {
++        message: 'Only admins can create organisations',
++      });
++    }
++
+     ctx.logger.info({
+       input: {
+         priceId,
+diff --git a/packages/trpc/server/team-router/create-team.ts b/packages/trpc/server/team-router/create-team.ts
+index 9272764..125f3ed 100644
+--- a/packages/trpc/server/team-router/create-team.ts
++++ b/packages/trpc/server/team-router/create-team.ts
+@@ -1,4 +1,6 @@
++import { AppError, AppErrorCode } from '@documenso/lib/errors/app-error';
+ import { createTeam } from '@documenso/lib/server-only/team/create-team';
++import { isAdmin } from '@documenso/lib/utils/is-admin';
+ 
+ import { authenticatedProcedure } from '../trpc';
+ import { ZCreateTeamRequestSchema, ZCreateTeamResponseSchema } from './create-team.types';
+@@ -11,6 +13,12 @@ export const createTeamRoute = authenticatedProcedure
+     const { teamName, teamUrl, organisationId, inheritMembers } = input;
+     const { user } = ctx;
+ 
++    if (!isAdmin(user)) {
++      throw new AppError(AppErrorCode.UNAUTHORIZED, {
++        message: 'Only admins can create teams',
++      });
++    }
++
+     ctx.logger.info({
+       input: {
+         organisationId,
